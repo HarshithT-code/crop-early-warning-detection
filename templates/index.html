@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <h1>Early Warning System<br/><span class="hero-accent">for Crop Yield Loss</span></h1>
+    <p>Select your crop and location. Get AI-powered risk predictions, live weather analysis, and the exact optimal harvest window — instantly.</p>
+    <div class="hero-badges">
+      <span class="hbadge">🌾 50+ Crops</span>
+      <span class="hbadge">🗺️ 28 States · 400+ Districts</span>
+      <span class="hbadge">🌡️ Live Weather</span>
+      <span class="hbadge">📅 Harvest Window</span>
+    </div>
+  </div>
+  <div class="hero-illustration">
+    <div class="hero-ring">
+      <span class="hero-emoji">🌾</span>
+    </div>
+  </div>
+</section>
+
+<!-- FORM CARD -->
+<section class="form-section">
+  <div class="form-card">
+    <div class="form-card-header">
+      <h2>Generate Your Early Warning</h2>
+      <p>Fill in all details below and click the button to get your personalised crop risk report.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form action="/predict" method="POST" id="mainForm">
+
+      <!-- ROW 1: Location -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-step">Step 1</span>
+            State
+          </label>
+          <select name="state" id="stateSelect" class="form-control" required>
+            <option value="" disabled selected>— Select your state —</option>
+            {% for s in states %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-step">Step 2</span>
+            District
+          </label>
+          <select name="district" id="districtSelect" class="form-control" required>
+            <option value="" disabled selected>— Select state first —</option>
+          </select>
+          <span class="form-hint" id="districtHint"></span>
+        </div>
+      </div>
+
+      <!-- ROW 2: Crop + Date -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-step">Step 3</span>
+            Crop
+          </label>
+          <select name="crop" id="cropSelect" class="form-control" required>
+            <option value="" disabled selected>— Select your crop —</option>
+            {% for c in crops %}
+            <option value="{{ c }}" data-icon="{{ crop_db[c]['icon'] }}">{{ crop_db[c]['icon'] }} {{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <span class="label-step">Step 4</span>
+            Sowing Date
+          </label>
+          <input
+            type="date"
+            name="sowing_date"
+            class="form-control"
+            min="{{ min_date }}"
+            max="{{ max_date }}"
+            required
+          />
+          <span class="form-hint">Actual sowing date or planned date</span>
+        </div>
+      </div>
+
+      <!-- CROP INFO PANEL (shown when crop selected) -->
+      <div class="crop-info-panel" id="cropInfoPanel" style="display:none">
+        <div class="crop-info-grid" id="cropInfoGrid"></div>
+      </div>
+
+      <!-- SUBMIT -->
+      <div class="form-submit-row">
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span class="btn-icon">🚨</span>
+          Generate Early Warning Report
+        </button>
+        <p class="submit-note">Fetches live weather from Open-Meteo &amp; runs AI prediction in real time</p>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+<!-- CROP REFERENCE TABLE -->
+<section class="ref-section">
+  <div class="ref-card">
+    <h3>📖 Crop Reference Guide</h3>
+    <p class="ref-subtitle">Ideal conditions and growth periods for each supported crop</p>
+    <div class="ref-table-wrap">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>Crop</th>
+            <th>Growth Period</th>
+            <th>Ideal Temp (°C)</th>
+            <th>Ideal Humidity (%)</th>
+            <th>Ideal Rainfall (mm/mo)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c, info in crop_db.items() %}
+          <tr>
+            <td><span class="crop-icon">{{ info.icon }}</span> {{ c }}</td>
+            <td>{{ info.growth_days }} days</td>
+            <td>{{ info.ideal_temp[0] }}–{{ info.ideal_temp[1] }}</td>
+            <td>{{ info.ideal_hum[0] }}–{{ info.ideal_hum[1] }}</td>
+            <td>{{ info.ideal_rain[0] }}–{{ info.ideal_rain[1] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- JS: Dynamic district loading + crop info panel -->
+<script>
+  const INDIA = {{ india_states | tojson }};
+  const CROP_DB = {{ crop_db | tojson }};
+
+  const stateEl    = document.getElementById('stateSelect');
+  const districtEl = document.getElementById('districtSelect');
+  const cropEl     = document.getElementById('cropSelect');
+  const infoPanel  = document.getElementById('cropInfoPanel');
+  const infoGrid   = document.getElementById('cropInfoGrid');
+  const hint       = document.getElementById('districtHint');
+
+  stateEl.addEventListener('change', function () {
+    const dists = INDIA[this.value] || [];
+    districtEl.innerHTML = '<option value="" disabled selected>— Select district —</option>';
+    dists.sort().forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = opt.textContent = d;
+      districtEl.appendChild(opt);
+    });
+    hint.textContent = dists.length + ' districts available';
+  });
+
+  cropEl.addEventListener('change', function () {
+    const c = CROP_DB[this.value];
+    if (!c) { infoPanel.style.display = 'none'; return; }
+    infoGrid.innerHTML = `
+      <div class="ci-item"><span class="ci-label">Growth Period</span><span class="ci-val">${c.growth_days} days</span></div>
+      <div class="ci-item"><span class="ci-label">Ideal Temp</span><span class="ci-val">${c.ideal_temp[0]}–${c.ideal_temp[1]}°C</span></div>
+      <div class="ci-item"><span class="ci-label">Ideal Humidity</span><span class="ci-val">${c.ideal_hum[0]}–${c.ideal_hum[1]}%</span></div>
+      <div class="ci-item"><span class="ci-label">Ideal Rainfall</span><span class="ci-val">${c.ideal_rain[0]}–${c.ideal_rain[1]} mm/mo</span></div>
+    `;
+    infoPanel.style.display = 'block';
+  });
+
+  document.getElementById('mainForm').addEventListener('submit', function () {
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = '⏳ Fetching weather & running AI…';
+    btn.disabled = true;
+  });
+</script>
+
+{% endblock %}

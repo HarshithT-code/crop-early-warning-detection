@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Early Warning Report{% endblock %}
+
+{% block content %}
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="/">← Back to Home</a>
+  <span>/</span>
+  <span>Early Warning Report</span>
+</div>
+
+<!-- RISK BANNER -->
+<div class="risk-banner risk-{{ risk_tag }}">
+  <div class="risk-icon-wrap">
+    {% if risk == 0 %}<span class="risk-icon">🟢</span>
+    {% elif risk == 1 %}<span class="risk-icon">🟡</span>
+    {% else %}<span class="risk-icon">🔴</span>{% endif %}
+  </div>
+  <div class="risk-text">
+    <div class="risk-eyebrow">Early Warning Report &nbsp;·&nbsp; {{ crop_info.icon }} {{ crop_key }} &nbsp;·&nbsp; 📍 {{ district }}, {{ state }}</div>
+    <div class="risk-title">
+      {% if risk == 0 %}LOW RISK — SAFE
+      {% elif risk == 1 %}MEDIUM RISK — WARNING
+      {% else %}HIGH RISK — DANGER{% endif %}
+    </div>
+    <div class="risk-meta">
+      AI Confidence: <strong>{{ proba }}%</strong> &nbsp;·&nbsp;
+      Coordinates: <strong>{{ lat }}°N, {{ lon }}°E</strong> &nbsp;·&nbsp;
+      Generated: <strong>{{ generated }}</strong>
+    </div>
+  </div>
+  <div class="risk-yield-badge">
+    <div class="yield-pct">{{ yield_loss }}%</div>
+    <div class="yield-label">Yield Loss Risk</div>
+  </div>
+</div>
+
+<!-- YIELD PROGRESS BAR -->
+<div class="yield-bar-wrap">
+  <div class="yield-bar-track">
+    <div class="yield-bar-fill yield-fill-{{ risk_tag }}" style="width: {{ yield_loss }}%">
+      <span>{{ yield_loss }}%</span>
+    </div>
+  </div>
+  <div class="yield-bar-labels">
+    <span>0%</span><span>Safe (0–15%)</span><span>Warning (15–45%)</span><span>Danger (45–100%)</span>
+  </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="result-grid">
+
+  <!-- WEATHER CARD -->
+  <div class="rcard weather-card">
+    <h3 class="rcard-title">🌦️ Live Weather — {{ district }}</h3>
+    <p class="rcard-sub">{{ weather_sky }} &nbsp;·&nbsp; 7-day forecast included</p>
+    <div class="weather-metrics">
+      <div class="wm-item">
+        <div class="wm-val">{{ weather.temp }}°C</div>
+        <div class="wm-label">Temperature</div>
+      </div>
+      <div class="wm-item">
+        <div class="wm-val">{{ weather.humidity }}%</div>
+        <div class="wm-label">Humidity</div>
+      </div>
+      <div class="wm-item">
+        <div class="wm-val">{{ weather.rain_now }} mm</div>
+        <div class="wm-label">Rain Now</div>
+      </div>
+      <div class="wm-item">
+        <div class="wm-val">{{ weather.forecast_rain_7d }} mm</div>
+        <div class="wm-label">7-Day Forecast</div>
+      </div>
+      <div class="wm-item">
+        <div class="wm-val">{{ weather.wind }} km/h</div>
+        <div class="wm-label">Wind Speed</div>
+      </div>
+      <div class="wm-item">
+        <div class="wm-val">{{ ndvi }}</div>
+        <div class="wm-label">NDVI Index</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HARVEST WINDOW CARD -->
+  <div class="rcard harvest-card">
+    <h3 class="rcard-title">📅 Optimal Harvest Window</h3>
+    <p class="rcard-sub">Based on sowing date + crop growth period</p>
+    <table class="harvest-table">
+      <tr>
+        <td class="ht-label">Crop</td>
+        <td class="ht-val">{{ crop_info.icon }} {{ crop_key }}</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Sowing Date</td>
+        <td class="ht-val">{{ sowing_date }}</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Growth Period</td>
+        <td class="ht-val">{{ growth_days }} days</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Harvest Window</td>
+        <td class="ht-val ht-highlight">{{ h_start }} → {{ h_end }}</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Status</td>
+        <td class="ht-val
+          {% if days_left < 0 %}ht-overdue{% elif days_left <= 14 %}ht-soon{% else %}ht-ahead{% endif %}">
+          {% if days_left < 0 %}
+            ⚠️ Overdue by {{ (-days_left) }} days — Harvest Immediately!
+          {% elif days_left == 0 %}
+            ✅ Harvest window starts today!
+          {% elif days_left <= 14 %}
+            🔔 {{ days_left }} days to harvest window
+          {% else %}
+            📅 {{ days_left }} days remaining
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td class="ht-label">Ideal Temp</td>
+        <td class="ht-val">{{ crop_info.ideal_temp[0] }}–{{ crop_info.ideal_temp[1] }}°C</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Ideal Humidity</td>
+        <td class="ht-val">{{ crop_info.ideal_hum[0] }}–{{ crop_info.ideal_hum[1] }}%</td>
+      </tr>
+      <tr>
+        <td class="ht-label">Ideal Rainfall</td>
+        <td class="ht-val">{{ crop_info.ideal_rain[0] }}–{{ crop_info.ideal_rain[1] }} mm/mo</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- CONDITION ANALYSIS CARD -->
+  <div class="rcard condition-card">
+    <h3 class="rcard-title">🌱 Crop Condition Analysis</h3>
+    <p class="rcard-sub">Current weather vs ideal range for {{ crop_key }}</p>
+    <div class="conditions-list">
+      {% for param, status, msg in conditions %}
+      <div class="cond-row cond-{{ status }}">
+        <div class="cond-icon">
+          {% if status == 'ok' %}✅
+          {% elif status == 'low' %}🔽
+          {% else %}🔼{% endif %}
+        </div>
+        <div class="cond-body">
+          <div class="cond-param">{{ param }}</div>
+          <div class="cond-msg">{{ msg }}</div>
+        </div>
+        <div class="cond-badge cond-badge-{{ status }}">
+          {{ status | upper }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ADVISORY CARD -->
+  <div class="rcard advisory-card advisory-{{ risk_tag }}">
+    <h3 class="rcard-title">
+      {% if risk == 0 %}✅ Action Advisory — Safe Conditions
+      {% elif risk == 1 %}⚠️ Action Advisory — Preventive Measures
+      {% else %}🔴 Action Advisory — Immediate Action Required{% endif %}
+    </h3>
+    <p class="rcard-sub">Specific recommendations for your crop and current risk level</p>
+    <ul class="advisory-list">
+      {% for icon, text in advisory %}
+      <li class="adv-item">
+        <span class="adv-icon">{{ icon }}</span>
+        <span class="adv-text">{{ text }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</div>
+
+<!-- DATA SOURCES -->
+<div class="sources-bar">
+  <span>📡 Weather: Open-Meteo (Live)</span>
+  <span>🗺️ Geocoding: OpenStreetMap Nominatim</span>
+  <span>🤖 Model: Random Forest (200 trees, 10k samples)</span>
+  <span>📅 Generated: {{ generated }}</span>
+</div>
+
+<!-- CTA -->
+<div class="cta-row">
+  <a href="/" class="btn-secondary">← New Prediction</a>
+</div>
+
+{% endblock %}

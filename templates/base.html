@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Early Warning System{% endblock %} for Crop Yield Loss</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon">🌾</span>
+        <div>
+          <span class="brand-name">Early Warning System</span>
+          <span class="brand-sub">for Crop Yield Loss</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <span class="nav-tag">🇮🇳 All India</span>
+        <span class="nav-tag">🤖 AI Powered</span>
+        <span class="nav-tag">🌡️ Live Weather</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-col">
+        <strong>🌾 Early Warning System</strong>
+        <p>Early Warning System for Crop Yield Loss.<br/>Empowering Indian farmers with AI and real-time data.</p>
+      </div>
+      <div class="footer-col">
+        <strong>Data Sources</strong>
+        <p>🌡️ Weather: Open-Meteo (Live, Free)<br/>🗺️ Geocoding: OpenStreetMap Nominatim<br/>🤖 AI: Random Forest (200 trees)</p>
+      </div>
+      <div class="footer-col">
+        <strong>Support</strong>
+        <p>For crop advisory, contact your local<br/>Krishi Vigyan Kendra (KVK) or<br/>District Agriculture Officer.</p>
+      </div>
+    </div>
+    <div class="footer-copy">
+      © 2024 Early Warning System for Crop Yield Loss &nbsp;|&nbsp; All India Coverage &nbsp;|&nbsp; Real Weather · AI Prediction · Crop Advisory
+    </div>
+  </footer>
+
+</body>
+</html>
